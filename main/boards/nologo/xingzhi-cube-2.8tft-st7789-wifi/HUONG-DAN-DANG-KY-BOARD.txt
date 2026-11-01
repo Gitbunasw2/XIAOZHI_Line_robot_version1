@@ -1,0 +1,32 @@
+Them board vao ESP-IDF (chi can 1 lan):
+
+1) Copy folder nay vao:
+   xiaozhi-esp32-main/main/boards/nologo/xingzhi-cube-2.8tft-st7789-wifi/
+
+2) main/Kconfig.projbuild  (trong choice BOARD_TYPE), them:
+
+    config BOARD_TYPE_XINGZHI_CUBE_2_8TFT_ST7789_WIFI
+        bool "Nologo Xingzhi Cube 2.8-inch TFT ST7789 Wi-Fi"
+        depends on IDF_TARGET_ESP32S3
+
+3) main/CMakeLists.txt, them truoc cac elseif khac:
+
+elseif(CONFIG_BOARD_TYPE_XINGZHI_CUBE_2_8TFT_ST7789_WIFI)
+    set(BOARD_DIR "nologo/xingzhi-cube-2.8tft-st7789-wifi")
+    set(BUILTIN_TEXT_FONT font_noto_sans_basic_20_4)
+    set(BUILTIN_ICON_FONT font_material_symbols_20_4)
+    set(DEFAULT_EMOJI_COLLECTION noto-color-emoji_128)
+
+4) Build:
+
+idf.py set-target esp32s3
+idf.py menuconfig
+  Xiaozhi Assistant -> Board Type -> Nologo Xingzhi Cube 2.8-inch TFT ST7789 Wi-Fi
+idf.py build
+idf.py merge-bin
+copy build\merged-binary.bin ...\firmwares\robot5320_tft28_st7789.bin
+
+Neu man bi am anh / sai mau: sua trong config.h
+  DISPLAY_INVERT_COLOR
+  DISPLAY_MIRROR_X / DISPLAY_MIRROR_Y
+  DISPLAY_RGB_ORDER

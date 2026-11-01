@@ -1,0 +1,88 @@
+CAC THAY DOI SO VOI xiaozhi-esp32-main GOC (ban RB5320XZ78AI)
+==================================================================
+Yeu cau: ESP-IDF v6.1 (toi thieu v6.0.1)
+
+BUILD
+  idf.py fullclean
+  idf.py set-target esp32s3
+  idf.py menuconfig  -> Xiaozhi Assistant -> Target Board -> chon board ben duoi
+  idf.py build
+  idf.py merge-bin   -> build/merged-binary.bin
+
+------------------------------------------------------------------
+1) TEN PHAT WI-FI: RB5320XZ78AI-xxxx (thay cho Xiaozhi-xxxx)
+   - main/boards/common/wifi_board.cc       (ap dung cho MOI board)
+   - main/boards/bread-compact-wifi-multi/  (che do an toan)
+   Ten may trong router (DHCP hostname) cung doi thanh RB5320XZ78AI-xxxx.
+
+2) BOARD MOI
+   a. Bread Compact WiFi Multi (cau hinh chan qua web 192.168.4.1)
+      main/boards/bread-compact-wifi-multi/
+      - Chan GPIO doc tu NVS (rb5320/device_json), cau hinh o tab "Cau hinh Thiet bi"
+      - Man TFT SPI: ST7789/P3, ST7735/S, ILI9341/9342C, ILI9486, ILI9488, ILI9163C,
+        ST7796/S, GC9A01, GC9107/9106, NV3023. OLED I2C: SSD1306, SH1106
+      - Cau hinh theo dinh dang config.json (Xuat/Nhap/Luu cung 1 dinh dang, mau: pin-config-mau.json)
+      - Am thanh I2S Simplex / Duplex / chip ES8311, LED WS2812, den phu, pin + bao sac
+      - Robot RB5320 (motor, HC-SR04, 2 LED, lenh giong noi) cau hinh tu web, mach mau "Robot RB5320"
+      - The nho microSD + phat nhac MP3 bang giong noi, man OLED phu (cau hinh tu web)
+      - Chon driver motor: 4 chan, TB6612, L298N, L293D, DRV8833, L9110S, MX1508, BTS7960
+      - Chuc nang robot bat/tat: Tranh vat can, Do line PID 6 cam bien (o chan mo khi tat)
+      - Trang 192.168.4.1: bam Luu tu nhay toi chan trung/sai, chan cam 0/39/40/35/36/37,
+        ghi chu TX/RX 43/44 (thao day khi nap)
+      - Chuc nang "Dieu khien Bluetooth AT-09 (app Dabble)"; the nho, OLED phu, ESP32-WROOM A2DP
+        deu co o tick, khong dung thi mo di va khong tinh trung chan
+      - Logo RB5320XZ78AI luc khoi dong tu thu phong dung ti le cho moi kich thuoc man (ban goc net 772x700)
+      - Hinh nen sang/toi tu gian vua khit moi kich thuoc man LCD, giu tron anh, khong cat,
+        lam net + dither; nap firmware moi tu ve giao dien SANG
+      - Nut CO DINH: BOOT = GPIO0, Vol+ = GPIO40, Vol- = GPIO39 (khong doi tu web)
+      - Kiem tra chan sai/trung, che do an toan khi crash 3 lan
+      - Xem HUONG-DAN.txt trong thu muc board
+   b. Nologo Xingzhi Cube 4.0-inch TFT ILI9488 Wi-Fi
+      main/boards/nologo/xingzhi-cube-4.0tft-ili9488-wifi/  (320x480, SPI 18-bit)
+   c. Nologo Xingzhi Cube 2.8-inch TFT ST7789 Wi-Fi
+      main/boards/nologo/xingzhi-cube-2.8tft-st7789-wifi/
+   d. Nologo Xingzhi Cube 2.8-inch TFT ILI9341 Wi-Fi
+      main/boards/nologo/xingzhi-cube-2.8tft-ili9341-wifi/
+   e. RB HC04 + man phu (truoc day ten "RB5320 Robot"; thu muc van la rb5320)  (logo khoi dong lam lai cho net)
+      main/boards/rb5320/  - logo RB5320 320x240 khi khoi dong
+      CAP NHAT: bo hong ngoai 41/42; them the nho microSD (MISO 42, CLK 41, MOSI 20, CS 19)
+      phat nhac MP3 bang giong noi; them man OLED phu SSD1306 0.96" (SDA 3, SCL 46) hien gio,
+      Wi-Fi, pin, mat robot theo cam xuc, khoang cach HC-SR04, chu AI dang noi.
+      Code robot dung chung voi board Multi (bread-compact-wifi-multi/rb_robot.h).
+
+
+   f. RB Do Line PID (ST7789 2.8", TB6612 6 chan, cam bien line 6 kenh)
+      main/boards/robot-line-pid/  - TB6612: AIN1 21, AIN2 47, PWMA 12, BIN1 20, BIN2 19, PWMB 11
+      Cam bien line S0..S5: 1, 41, 2, 48, 42, 3. PID dieu chinh bang giong noi, hieu chinh cam bien.
+      Giu Vol+: bat/tat do line, giu Vol-: hieu chinh cam bien.
+   g. RB AT09 + HC04  (main/boards/rb-at09-hc04/, dung chung code rb5320)
+      Bo OLED phu, Bluetooth AT-09: ESP TX 46 -> RXD, ESP RX 3 <- TXD. App Dabble GamePad:
+      START = tranh vat can, SELECT = lai tay, mui ten/joystick lai, X dung, VUONG den.
+   h. RB Do Line PID + AT09  (main/boards/robot-line-pid-at09/, dung chung code robot-line-pid)
+      Bluetooth AT-09: ESP TX 46, ESP RX 38. START = do line, SELECT = lai tay, TRON = hieu chinh.
+
+3) BOARD CAP NHAT
+   - Xingzhi Cube 1.54-inch TFT Wi-Fi: them logo khoi dong + anh nen sang/toi
+
+4) TRANG CAU HINH WI-FI (192.168.4.1)
+   components/78__esp-wifi-connect/  (ghi de thu vien 78/esp-wifi-connect 3.3.1)
+   - Giao dien RB5320XZ78AI, tab Mic / QR / Cau hinh Thiet bi / Advanced
+   - API: POST /rb/device (luu), GET /rb/device (doc cau hinh + trang thai),
+          /rb/mic, /rb/qr, /rb/reboot
+   - Tab Cau hinh Thiet bi tu nap cau hinh dang luu, hien trang thai board,
+     them ILI9488, ST7796, ILI9486, ILI9163C, GC9107, NV3023, ST7735,
+     Duplex, ES8311 (MCLK, I2C, PA), SPI MHz, "Khong co man hinh", OLED SH1106,
+     muc "The nho micro SD" va "Man OLED phu"; mach mau Robot RB5320 co san the nho + OLED phu
+   - Xuat / Nhap / Luu theo dinh dang config.json (screen_type, driver, pin_mosi, i2s_mic_ws...)
+
+5) FILE DANG KY
+   - main/Kconfig.projbuild : them 9 board o tren
+   - main/CMakeLists.txt    : them 9 board o tren
+   - main/idf_component.yml : them atanisoft/esp_lcd_ili9488 ^1.1.1
+
+------------------------------------------------------------------
+DA KIEM TRA: tung file .cc bien dich voi ESP-IDF v6.1 (xtensa-esp32s3) khong loi;
+bo doc cau hinh chan va trang 192.168.4.1 da chay thu tren may tinh.
+Man OLED phu (mat robot, chu) da ve thu tren may tinh.
+CHUA KIEM TRA tren phan cung that: cac chip man moi (ST7735, ILI9486, ILI9163C,
+GC9107), ILI9488 tren board 4.0", motor/HC-SR04 cua RB5320, the nho + phat MP3, OLED phu.

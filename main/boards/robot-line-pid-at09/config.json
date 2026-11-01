@@ -1,0 +1,11 @@
+{
+    "manufacturer": "custom",
+    "type": "robot-line-pid-at09",
+    "target": "esp32s3",
+    "builds": [
+        {
+            "name": "robot-line-pid-at09",
+            "sdkconfig_append": []
+        }
+    ]
+}

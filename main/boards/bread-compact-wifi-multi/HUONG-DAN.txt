@@ -1,0 +1,139 @@
+BOARD DA NANG: bread-compact-wifi-multi (ESP32-S3, Wi-Fi)
+=========================================================
+Mot firmware dung cho nhieu mach. Chan GPIO KHONG nam trong config.h ma duoc
+cau hinh tren trang Wi-Fi http://192.168.4.1 -> tab "Cau hinh Thiet bi".
+Doi chan / doi man hinh chi can Luu + Khoi dong lai, KHONG can build lai.
+
+1) BUILD (1 lan)
+   idf.py set-target esp32s3
+   idf.py menuconfig
+     Xiaozhi Assistant -> Board Type -> Bread Compact WiFi Multi (cau hinh chan qua web 192.168.4.1)
+   idf.py build
+   idf.py merge-bin   -> build/merged-binary.bin
+
+   Project phai co folder components/78__esp-wifi-connect (ban da sua) vi trang
+   cau hinh va API /rb/device nam trong do.
+
+2) CAU HINH CHAN
+   - Chua luu Wi-Fi: board tu phat Wi-Fi "RB5320XZ78AI-xxxx".
+     Da luu Wi-Fi: bam nut BOOT trong luc dang khoi dong (hoac xoa Wi-Fi da luu)
+     de vao che do cau hinh.
+   - Ket noi dien thoai vao Wi-Fi do, mo http://192.168.4.1
+   - Tab "Cau hinh Thiet bi": chon mach co san hoac nhap tay -> "Luu cau hinh"
+     -> "Khoi dong lai".
+   - Mo lai trang: o mau xanh/vang o dau tab cho biet board dang chay gi va
+     cac canh bao (trung chan, chan sai...).
+
+3) HO TRO
+   Man hinh : khong man, hoac TFT SPI:
+                ST7789/ST7789V/P3, ST7735/ST7735S, ILI9341/ILI9342C, ILI9486,
+                ILI9488 (18-bit), ILI9163C, ST7796/ST7796S, GC9A01, GC9107/GC9106, NV3023
+              OLED I2C (dia chi 0x3C): SSD1306, SH1106 - 128x32 hoac 128x64
+              * ST7735, ILI9486, ILI9163C, GC9107 dung chuoi khoi tao rieng tren driver
+                chung -> neu mau sai/am ban: doi RGB<->BGR, Dao mau; lech hinh: chinh Offset
+              * ILI9486 loai man "Raspberry Pi 3.5inch" (co IC dich 16-bit) co the khong chay
+   Am thanh : I2S Simplex (INMP441 + MAX98357, 6 chan), Duplex (4 chan),
+              hoac chip ES8311 (MCLK, BCLK, LRCK, DOUT, DIN + I2C SDA/SCL, PA loa)
+              ES8311 dung chung bus I2C voi OLED neu cung chan SDA/SCL
+   Logo     : RB5320XZ78AI hien luc khoi dong tren MOI man (TFT va OLED), tu thu phong
+              giu dung ti le theo Rong x Cao da cau hinh (khong meo), can giua nen den.
+              Man tron GC9A01 de le rong hon de logo nam trong vong tron.
+              Tu an khi ket noi Wi-Fi hoac vao che do cau hinh.
+              Logo goc: rb_logo_1bpp.c - ban do phan giai cao 772x700 (1-bit), firmware luon
+              THU NHO (trung binh dien tich) -> net, vien muot o moi kich thuoc
+   Hinh nen : sang + toi (chi man LCD), tu GIAN VUA KHIT man, giu TRON anh, KHONG cat
+              (co the hoi meo), KHONG xoay: anh luon dung doc ke ca man nam ngang. Bat/tat bang o "Hinh nen sang/toi" (wallpaper 0/1).
+              Can PSRAM (~2 x Rong x Cao x 2 byte); khong du thi tu bo qua.
+              Anh goc: rb_wallpaper.c (240x320, mau 24-bit). Phong to bicubic + lam net,
+              thu nho trung binh dien tich, dither khi ve 16-bit. SANG = anh mach den,
+              TOI = anh mach vang. Moi lan NAP FIRMWARE MOI tu ve giao dien SANG
+              (doi sang toi sau do van duoc giu cho toi lan nap tiep theo).
+              Muon sieu net tren man lon: can anh goc lon hon (>= 480x640).
+   Chan man : SDA / MOSI (DISPLAY_SDA), SCL / CLK (DISPLAY_SCL), DC / RS (DISPLAY_DC),
+              CS (DISPLAY_CS), RES / RST (DISPLAY_RES), BL / LED (DISPLAY_BACKLIGHT_PIN)
+   Robot    : chon DRIVER motor: 4 chan (nhu RB5320), TB6612FNG (6 chan + STBY), L298N (+ENA/ENB),
+              L293D (+EN1/EN2), DRV8833, L9110S, MX1508 (PWM tren chan IN), BTS7960/IBT-2.
+              Ten o chan tu doi theo driver (BIN1/AIN1/PWMA..., IN1/ENA..., RPWM/LPWM...).
+              Dao chieu motor trai/phai bang o tick (khong can dao day).
+              CHUC NANG: tick "Tranh vat can" (HC-SR04) va/hoac "Do line PID" (6 cam bien) moi mo
+              o chan cua chuc nang do; chuc nang tat -> o mo di, chan bi bo qua, khong tinh trung.
+              Do line: S0 = trai nhat. GPIO1-10 doc analog, 11-20 (ADC2) kem on dinh khi bat Wi-Fi,
+              chan khac doc digital 0/1. Kp/Ki/Kd, toc do, kieu vach (den/trang).
+              Lenh: "do line", "dung do line", "hieu chinh cam bien", "chinh PID kp 0.05 kd 0.2".
+              Bluetooth AT-09 / HM-10 (app Dabble GamePad): ESP TX -> RXD, ESP RX <- TXD (RX khong
+              duoc la GPIO46). START = tranh vat can (hoac do line neu chi bat do line),
+              SELECT = ve lai tay, mui ten/joystick lai, X dung, VUONG den, TRON hieu chinh line /
+              lac lu, TAM GIAC do line (khi bat ca 2 chuc nang) / ca giut.
+              toc do motor % (noi "chay cham lai / nhanh len" de doi), HC-SR04 TRIG/ECHO, LED 1, LED 2,
+              khoang cach ne vat can (cm), thoi gian quay 360 do (ms), tu quay/lac khi ranh.
+              Lenh giong noi: tien, lui, re trai/phai, dung, tu tranh vat can, bat/tat den,
+              do khoang cach, lac lu, ca giut, the hien bat ngo. Chon mach mau "Robot RB5320".
+   The nho  : microSD qua SPI (MISO, CLK, MOSI, CS) -> /sdcard. The FAT32, file .mp3 de o thu muc
+              goc hoac thu muc "music" / "nhac", TEN FILE KHONG DAU (vd: Lac Troi - Son Tung.mp3).
+              Muon ten CO DAU: menuconfig -> Component config -> FAT Filesystem support ->
+              API character encoding -> UTF-8 (build bang scripts/build.py thi da tu bat).
+              Lenh giong noi: "mo nhac", "mo bai Lac Troi", "mo bai so 3", "bai tiep", "bai truoc",
+              "tiep tuc nghe nhac", "tat nhac", "co bai nao". Nhac phat khi robot RANH; bam nut BOOT
+              hoac goi robot thi nhac dung (noi "tiep tuc nghe nhac" de phat lai bai do).
+              MP3 moi tan so mau (44.1/48 kHz...), stereo tu tron thanh mono.
+   OLED phu : SSD1306/SH1106 I2C 0x3C (128x64 hoac 128x32), chay song song voi man chinh:
+              gio | trang thai | Wi-Fi | pin ; 2 mat robot theo cam xuc (chop mat, liec mat,
+              vui/buon/gian/ngac nhien/yeu/ngu/nhay mat/suy nghi/ngau/boi roi/khoc) ;
+              khoang cach HC-SR04 ; chu AI dang noi (bo dau, tu cuon dong).
+              Dung bus I2C rieng; neu trung SDA/SCL voi ES8311 thi dung chung bus ES8311.
+              OLED chinh + ES8311 bus rieng da chiem het 2 bus I2C -> khong them OLED phu duoc.
+   Luu y chan: GPIO19/20 = USB D-/D+ (dung thi mat cong USB native, nap qua cong UART).
+              GPIO46 = chan strapping: OLED/I2C keo len muc 1 -> khi nap firmware o che do
+              download co the bao loi -> rut OLED (hoac day VCC OLED) ra roi nap.
+   Nut      : CO DINH, khong doi tu web: BOOT/Wake = GPIO0, Tang am = GPIO40, Giam am = GPIO39
+              Thiet bi khac dat trung 0/39/40 se bi bo (hoac tat man / dung am thanh mac dinh)
+   LED      : WS2812 (1 bong hoac dai nhieu bong)
+   Den phu  : chan bat/tat den/relay, AI dieu khien bang giong noi
+   Pin      : chan ADC GPIO1-20, cau chia ap 100k/100k (sua BATTERY_DIVIDER_* trong config.h)
+              Bao sac: "Active HIGH" tat = LOW khi sac (TP4056/BQ24, tu bat pull-up)
+   Chua dung: Bluetooth A2DP, Ngon ngu (chon luc build), Giao dien WeChat, Do nhay mic
+
+4) FILE CAU HINH config.json (nut "Xuat / Nhap config.json" tren trang)
+   Mau: pin-config-mau.json trong thu muc nay. Firmware luu dung dinh dang nay.
+   screen_type           0 = TFT LCD SPI, 1 = OLED I2C, 2 = khong man hinh
+   oled_driver           0 = SSD1306, 1 = SH1106
+   driver (TFT)          0 ST7789, 1 ST7735, 2 ILI9341, 3 GC9A01, 4 ILI9488,
+                         5 ST7796, 6 ILI9486, 7 ILI9163C, 8 GC9107, 9 NV3023
+   rgb_order             0 = RGB, 1 = BGR
+   audio_codec_type      0 = I2S Simplex, 1 = I2S Duplex, 2 = ES8311
+   charging_active_level 0 = LOW khi sac, 1 = HIGH khi sac
+   language              0 = vi-VN, 1 = en-US (chi luu; ngon ngu chon luc build)
+   mirror_x/y, swap_xy, invert_color, backlight_invert: 0/1
+   pin_* , i2s_* , codec_* : so GPIO, -1 = khong gan
+   pin_boot / pin_vol_up / pin_vol_dn: luon 0 / 40 / 39 (bo qua gia tri trong file)
+   Them (khong bat buoc): spi_clock_mhz (0 = tu dong), codec_pa_inverted (0/1), wallpaper (0/1)
+   Robot: robot_enable (0/1), motor_driver (0-7), pin_motor_l1, pin_motor_l2, pin_motor_r1, pin_motor_r2,
+          pin_hc04_trig, pin_hc04_echo, pin_led1, pin_led2,
+          obstacle_cm (25), spin_360_ms (2200), robot_idle_move (0/1),
+          pin_motor_pwm_l, pin_motor_pwm_r (EN/PWM), pin_motor_stby, motor_speed (20-100),
+          motor_invert_l (mac dinh 1), motor_invert_r (mac dinh 0)
+          func_avoid (0/1), func_line (0/1), pin_line_0..pin_line_5, line_kp, line_ki, line_kd,
+          line_speed (%), line_white (0 vach den, 1 vach trang); sd_enable, oled2_enable (0/1)
+          func_bt (0/1), pin_at09_tx, pin_at09_rx, at09_baud (9600); bt_a2dp_enable (0/1)
+   The nho: pin_sd_miso, pin_sd_clk, pin_sd_mosi, pin_sd_cs   (-1 = khong co the)
+   OLED phu: pin_oled2_sda, pin_oled2_scl, oled2_driver (0 SSD1306, 1 SH1106),
+             oled2_height (64 / 32), oled2_flip (0/1 lat 180 do)
+   Mau RB5320 day du (man + robot + the nho + OLED phu): pin-config-rb5320.json
+   Mau RB Do Line PID (TB6612 + 6 cam bien):              pin-config-line-pid.json
+   Mau RB AT09 + HC04 / RB Do Line PID + AT09:            pin-config-rb-at09.json, pin-config-line-pid-at09.json
+   Chua dung: use_wechat, rotate_screen, pin_bluetooth_uart_tx/rx, pin_dout2
+
+5) TU BAO VE
+   - Bam LUU tren trang: tu kiem tra, nhay toi o bi trung / sai (vien do) va bao doi chan.
+     Chan cam: 0, 39, 40 (nut), 35, 36, 37 (PSRAM), 22-34, RST/EN.
+     GPIO43 (TX) / 44 (RX): dung duoc nhung LUC NAP CODE PHAI THAO DAY 2 chan nay ra.
+   - Chan khong ton tai, chan flash/PSRAM (26-37 voi module N8R8/N16R8) -> bo qua
+   - Trung chan -> bo thiet bi uu tien thap hon. Thu tu uu tien: nut co dinh > am thanh >
+     man hinh > robot > the nho > OLED phu > LED/den/pin/HC-SR04/LED robot
+   - Man khoi tao loi -> chay khong man hinh, van noi chuyen duoc
+   - Board crash lien tiep 3 lan (panic/watchdog/sut ap) -> CHE DO AN TOAN:
+     tat man hinh + ngoai vi, dung am thanh mac dinh (4,5,6,7,15,16), tu mo
+     trang 192.168.4.1 de sua. Chay on dinh 20 giay thi bo dem tu xoa.
+
+6) CHAN MAC DINH (khi chua cau hinh)
+   Mic: WS 4, SCK 5, DIN 6 | Loa: DOUT 7, BCLK 15, LRCK 16 | Nut: BOOT 0, Vol+ 40, Vol- 39 | Khong man hinh

@@ -1,0 +1,13 @@
+{
+    "manufacturer": "custom",
+    "type": "rb-at09-hc04",
+    "target": "esp32s3",
+    "builds": [
+        {
+            "name": "rb-at09-hc04",
+            "sdkconfig_append": [
+                "CONFIG_FATFS_API_ENCODING_UTF_8=y"
+            ]
+        }
+    ]
+}

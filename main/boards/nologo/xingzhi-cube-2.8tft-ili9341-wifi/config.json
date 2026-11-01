@@ -1,0 +1,11 @@
+{
+    "manufacturer": "nologo",
+    "type": "xingzhi-cube-2.8tft-ili9341-wifi",
+    "target": "esp32s3",
+    "builds": [
+        {
+            "name": "xingzhi-cube-2.8tft-ili9341-wifi",
+            "sdkconfig_append": []
+        }
+    ]
+}

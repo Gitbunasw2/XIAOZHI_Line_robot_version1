@@ -1,0 +1,13 @@
+{
+    "manufacturer": "custom",
+    "type": "rb5320",
+    "target": "esp32s3",
+    "builds": [
+        {
+            "name": "rb5320",
+            "sdkconfig_append": [
+                "CONFIG_FATFS_API_ENCODING_UTF_8=y"
+            ]
+        }
+    ]
+}

@@ -1,0 +1,149 @@
+// Backup Arduino. Khong nam trong ban build ESP-IDF.
+// 6 cam bien analog, TB6612, STBY noi san VCC.
+// Toc do la duty 8-bit (-255..255), duong = tien. Chi dung speedRun() de chay motor.
+
+// --- TB6612: Motor A = banh trai, Motor B = banh phai ---
+const int AIN1 = 21;
+const int AIN2 = 47;
+const int PWMA = 12;
+const int BIN1 = 42;
+const int BIN2 = 41;
+const int PWMB = 11;
+
+// S0 trai nhat ... S5 phai nhat
+const int numSensors = 6;
+const int qtrPins[numSensors] = {1, 19, 2, 15, 20, 3};
+int sensorMin[numSensors];
+int sensorMax[numSensors];
+
+float Kp = 0.22;
+float Kd = 12.0;
+float Ki = 0;
+
+const int maxSpeed = 140;
+const int recoverySpeed = 80;
+
+int lastError = 0;
+const int setPoint = 2500;  // giua 6 mat: (6-1)*1000/2
+
+const int freq = 5000;
+const int resolution = 8;
+
+void speedRun(int left, int right);
+
+void setup() {
+  Serial.begin(115200);
+
+  pinMode(AIN1, OUTPUT);
+  pinMode(AIN2, OUTPUT);
+  pinMode(BIN1, OUTPUT);
+  pinMode(BIN2, OUTPUT);
+  ledcAttach(PWMA, freq, resolution);
+  ledcAttach(PWMB, freq, resolution);
+  speedRun(0, 0);
+
+  for (int i = 0; i < numSensors; i++) {
+    pinMode(qtrPins[i], INPUT);
+    sensorMin[i] = 4095;
+    sensorMax[i] = 0;
+  }
+  analogReadResolution(12);
+
+  Serial.println("CALIBRATING... dua tung mat qua vach den va nen trang");
+  for (int i = 0; i < 250; i++) {
+    for (int s = 0; s < numSensors; s++) {
+      int val = analogRead(qtrPins[s]);
+      if (val < sensorMin[s]) sensorMin[s] = val;
+      if (val > sensorMax[s]) sensorMax[s] = val;
+    }
+    delay(20);
+  }
+  Serial.println("Done.");
+
+  for (int i = 5; i > 0; i--) {
+    Serial.println(i);
+    delay(1000);
+  }
+}
+
+void loop() {
+  long weightedSum = 0;
+  long sum = 0;
+  bool lineVisible = false;
+  int raws[numSensors];
+
+  for (int i = 0; i < numSensors; i++) {
+    int rawVal = analogRead(qtrPins[i]);
+    raws[i] = rawVal;
+    int lo = sensorMin[i];
+    int hi = sensorMax[i];
+    int value = (hi <= lo) ? 0 : map(rawVal, lo, hi, 0, 1000);
+    value = constrain(value, 0, 1000);
+
+    if (value > 200) lineVisible = true;
+
+    weightedSum += (long)value * (i * 1000);
+    sum += value;
+  }
+
+  int position = (sum == 0) ? -1 : (int)(weightedSum / sum);
+
+  // 6 mat, roi position. Cach nhau bang tab, het hang moi xuong dong.
+  static uint32_t lastPrintMs = 0;
+  if (millis() - lastPrintMs >= 100) {
+    lastPrintMs = millis();
+    for (int i = 0; i < numSensors; i++) {
+      Serial.print(raws[i]);
+      Serial.print('\t');
+    }
+    Serial.println(position);
+  }
+
+  if (!lineVisible || sum == 0) {
+    if (lastError > 0) {
+      speedRun(recoverySpeed, -recoverySpeed);
+    } else {
+      speedRun(-recoverySpeed, recoverySpeed);
+    }
+    return;
+  }
+
+  int error = position - setPoint;
+  int D = error - lastError;
+  lastError = error;
+
+  // error > 0: vach ben phai, xe lech trai -> banh trai nhanh, banh phai cham.
+  // error < 0: nguoc lai. Cham banh phia trong thi xe moi quay duoc o doan cua.
+  int adj = (Kp * error) + (Kd * D) + (Ki * 0);
+  int leftMotorSpeed = constrain(maxSpeed + adj, -255, 255);
+  int rightMotorSpeed = constrain(maxSpeed - adj, -255, 255);
+  speedRun(leftMotorSpeed, rightMotorSpeed);
+}
+
+// left/right: -255..255, duong = tien.
+// Dao trai/phai: lenh banh trai ra Motor B, lenh banh phai ra Motor A.
+// Motor A (banh phai) tien: AIN1=0, AIN2=1. Motor B tien: BIN1=0, BIN2=1.
+void speedRun(int left, int right) {
+  int speedA = constrain(right, -255, 255);
+  int speedB = constrain(left, -255, 255);
+
+  if (speedA >= 0) {
+    digitalWrite(AIN1, LOW);
+    digitalWrite(AIN2, HIGH);
+    ledcWrite(PWMA, speedA);
+  } else {
+    digitalWrite(AIN1, HIGH);
+    digitalWrite(AIN2, LOW);
+    ledcWrite(PWMA, -speedA);
+  }
+
+  if (speedB >= 0) {
+    digitalWrite(BIN1, LOW);
+    digitalWrite(BIN2, HIGH);
+    ledcWrite(PWMB, speedB);
+  } else {
+    digitalWrite(BIN1, HIGH);
+    digitalWrite(BIN2, LOW);
+    ledcWrite(PWMB, -speedB);
+  }
+}

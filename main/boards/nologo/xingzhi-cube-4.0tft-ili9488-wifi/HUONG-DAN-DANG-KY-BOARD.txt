@@ -1,0 +1,50 @@
+Them board Xingzhi Cube 4.0" TFT ILI9488 (320x480) vao ESP-IDF (chi can 1 lan)
+Yeu cau: ESP-IDF v6.0.1 tro len (khuyen dung v6.1)
+
+1) Copy folder nay vao:
+   xiaozhi-esp32-main/main/boards/nologo/xingzhi-cube-4.0tft-ili9488-wifi/
+
+2) main/Kconfig.projbuild  (trong choice BOARD_TYPE), them:
+
+    config BOARD_TYPE_XINGZHI_CUBE_4_0TFT_ILI9488_WIFI
+        bool "Nologo Xingzhi Cube 4.0-inch TFT ILI9488 Wi-Fi"
+        depends on IDF_TARGET_ESP32S3
+
+3) main/CMakeLists.txt, them truoc cac elseif khac (vd truoc XINGZHI_CUBE_1_54TFT_WIFI):
+
+elseif(CONFIG_BOARD_TYPE_XINGZHI_CUBE_4_0TFT_ILI9488_WIFI)
+    set(BOARD_DIR "nologo/xingzhi-cube-4.0tft-ili9488-wifi")
+    set(BUILTIN_TEXT_FONT font_noto_sans_basic_20_4)
+    set(BUILTIN_ICON_FONT font_material_symbols_20_4)
+    set(DEFAULT_EMOJI_COLLECTION noto-color-emoji_128)
+
+4) main/idf_component.yml (BUOC MOI so voi ban 2.8 - ESP-IDF khong co san driver ILI9488),
+   them duoi dong espressif/esp_lcd_ili9341:
+
+  atanisoft/esp_lcd_ili9488: ^1.1.1
+
+5) Build:
+
+idf.py set-target esp32s3
+idf.py menuconfig
+  Xiaozhi Assistant -> Board Type -> Nologo Xingzhi Cube 4.0-inch TFT ILI9488 Wi-Fi
+idf.py build
+idf.py merge-bin
+copy build\merged-binary.bin ...\firmwares\robot5320_tft40_ili9488.bin
+
+Lan build dau idf.py se tu tai driver ILI9488 vao managed_components (can Internet).
+Neu bao loi "esp_lcd_ili9488.h: No such file" -> xoa folder build + dependencies.lock roi build lai.
+
+Khac biet so voi ban 2.8 ST7789:
+  - Man 320x480, anh nen + logo da phong len 320x480
+  - ILI9488 qua SPI bat buoc 18-bit mau (bits_per_pixel = 18), driver tu doi RGB565 -> RGB666
+  - Toc do SPI mac dinh 20MHz (DISPLAY_SPI_CLOCK_HZ trong config.h)
+  - Chan GPIO giu nguyen nhu ban 2.8 (cung PCB, gat jumper TFT sang 4.0)
+
+Neu man bi am anh / sai mau / nguoc: sua trong config.h
+  Mau am ban (trang thanh den)  -> DISPLAY_INVERT_COLOR true
+  Do <-> xanh duong bi doi      -> DISPLAY_RGB_ORDER LCD_RGB_ELEMENT_ORDER_RGB
+  Chu bi nguoc guong trai-phai  -> DISPLAY_MIRROR_X true
+  Hinh bi lon nguoc tren-duoi   -> DISPLAY_MIRROR_Y true
+  Man nhieu / soc / loang        -> DISPLAY_SPI_CLOCK_HZ (10 * 1000 * 1000)
+  Man trang tron                -> kiem tra jumper TFT 4.0 va chan CS/DC/RES
